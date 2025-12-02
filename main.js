@@ -7,8 +7,16 @@ import { VignettePass } from 'three/examples/jsm/postprocessing/VignettePass.js'
 import { io } from 'socket.io-client';
 
 // Socket.io connection
-// In dev, Vite proxy handles /socket.io, in prod server serves everything
-const socket = io(window.location.origin);
+// Allow server URL to be configured via environment variable or use default
+// For Netlify deployment, set VITE_SERVER_URL in Netlify environment variables
+// Example: https://your-server.herokuapp.com or https://your-server.render.com
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || window.location.origin;
+const socket = io(SERVER_URL, {
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionAttempts: 5
+});
 
 // Game state
 let scene, camera, renderer, composer;
@@ -92,6 +100,31 @@ function init() {
 
     // Event listeners
     setupEventListeners();
+
+    // Initialize connection status
+    updateConnectionStatus(socket.connected);
+    if (!socket.connected) {
+        showConnectionError('Connecting to server...');
+    }
+
+    // Show server URL if configured, or show help message if not
+    const hint = document.getElementById('server-config-hint');
+    const urlDisplay = document.getElementById('server-url-display');
+    if (hint && urlDisplay) {
+        if (import.meta.env.VITE_SERVER_URL) {
+            hint.classList.remove('hidden');
+            urlDisplay.textContent = import.meta.env.VITE_SERVER_URL;
+        } else if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            // Show help message on production if server URL not configured
+            hint.classList.remove('hidden');
+            urlDisplay.textContent = 'Not configured';
+            const hintText = hint.querySelector('.hint-text');
+            if (hintText) {
+                hintText.textContent = 'Server URL not configured. Set VITE_SERVER_URL environment variable in Netlify. See DEPLOYMENT.md for details.';
+                hintText.style.color = '#ff6600';
+            }
+        }
+    }
 
     // Start game loop
     animate();
@@ -294,6 +327,10 @@ function setupLighting() {
 function setupUI() {
     // Create lobby button
     document.getElementById('create-lobby-button').addEventListener('click', () => {
+        if (!socket.connected) {
+            showConnectionError('Not connected to server. Please wait for connection...');
+            return;
+        }
         const playerName = document.getElementById('player-name').value || 'Player';
         myPlayerName = playerName;
         socket.emit('create-lobby', playerName);
@@ -301,6 +338,10 @@ function setupUI() {
 
     // Join lobby button
     document.getElementById('join-lobby-button').addEventListener('click', () => {
+        if (!socket.connected) {
+            showConnectionError('Not connected to server. Please wait for connection...');
+            return;
+        }
         document.getElementById('start-screen').classList.add('hidden');
         document.getElementById('join-screen').classList.remove('hidden');
         socket.emit('list-lobbies');
@@ -335,6 +376,19 @@ function setupSocketEvents() {
     socket.on('connect', () => {
         console.log('Connected to server');
         myPlayerId = socket.id;
+        hideConnectionError();
+    });
+
+    socket.on('connect_error', (error) => {
+        console.error('Connection error:', error);
+        showConnectionError('Failed to connect to game server. Please check if the server is running.');
+    });
+
+    socket.on('disconnect', (reason) => {
+        console.log('Disconnected from server:', reason);
+        if (reason === 'io server disconnect') {
+            showConnectionError('Disconnected from server. Please refresh the page.');
+        }
     });
 
     socket.on('lobby-created', (data) => {
@@ -643,6 +697,38 @@ function resetGame() {
     bullets.clear();
     localPlayer = null;
     remotePlayer = null;
+}
+
+function showConnectionError(message) {
+    const errorDiv = document.getElementById('connection-error');
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.classList.remove('hidden');
+    }
+    updateConnectionStatus(false);
+}
+
+function hideConnectionError() {
+    const errorDiv = document.getElementById('connection-error');
+    if (errorDiv) {
+        errorDiv.classList.add('hidden');
+    }
+    updateConnectionStatus(true);
+}
+
+function updateConnectionStatus(connected) {
+    const indicator = document.getElementById('connection-indicator');
+    const text = document.getElementById('connection-text');
+    
+    if (indicator && text) {
+        if (connected) {
+            indicator.className = 'connected';
+            text.textContent = 'Connected';
+        } else {
+            indicator.className = 'disconnected';
+            text.textContent = 'Disconnected';
+        }
+    }
 }
 
 function animate() {

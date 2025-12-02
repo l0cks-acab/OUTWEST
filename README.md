@@ -12,6 +12,8 @@ A gritty cyberpunk spaghetti western arena shooter with online multiplayer suppo
 
 ## Installation
 
+### Local Development
+
 1. Install dependencies:
 ```bash
 npm install
@@ -28,6 +30,15 @@ npm run dev
 ```
 
 4. Open your browser to `http://localhost:5173` (or the port Vite assigns)
+
+### Production Deployment
+
+**Important**: This game requires both a frontend (static files) and backend (Node.js server) deployment.
+
+- **Frontend**: Deploy to Netlify, Vercel, or similar static hosting
+- **Backend**: Deploy to Railway, Render, Heroku, or similar Node.js hosting
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
 
 ## How to Play
 
