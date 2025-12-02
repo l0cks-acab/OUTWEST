@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyberpunk Western Arena - 1v1 Shooter</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- UI Overlay -->
+        <div id="ui-overlay">
+            <!-- Player 1 UI -->
+            <div class="player-ui player-1-ui">
+                <div class="health-bar">
+                    <div class="health-fill" id="p1-health"></div>
+                    <span class="health-text">P1 HEALTH</span>
+                </div>
+                <div class="ammo-counter">
+                    <span id="p1-ammo">∞</span>
+                </div>
+                <div class="player-name">PLAYER 1</div>
+            </div>
+            
+            <!-- Player 2 UI -->
+            <div class="player-ui player-2-ui">
+                <div class="health-bar">
+                    <div class="health-fill" id="p2-health"></div>
+                    <span class="health-text">P2 HEALTH</span>
+                </div>
+                <div class="ammo-counter">
+                    <span id="p2-ammo">∞</span>
+                </div>
+                <div class="player-name">PLAYER 2</div>
+            </div>
+            
+            <!-- Crosshair -->
+            <div id="crosshair">
+                <div class="crosshair-line horizontal"></div>
+                <div class="crosshair-line vertical"></div>
+            </div>
+            
+            <!-- Game Status -->
+            <div id="game-status">
+                <div id="winner-announcement" class="hidden"></div>
+                <div id="round-timer"></div>
+            </div>
+            
+            <!-- Instructions -->
+            <div id="instructions">
+                <div class="instruction-section">
+                    <h3>PLAYER 1</h3>
+                    <p>WASD - Move</p>
+                    <p>Mouse - Aim</p>
+                    <p>Left Click - Shoot</p>
+                </div>
+                <div class="instruction-section">
+                    <h3>PLAYER 2</h3>
+                    <p>Arrow Keys - Move</p>
+                    <p>Mouse - Aim</p>
+                    <p>Right Click - Shoot</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Start Screen -->
+        <div id="start-screen">
+            <h1>CYBERPUNK WESTERN</h1>
+            <h2>ARENA SHOOTER</h2>
+            <div id="player-name-input">
+                <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
+            </div>
+            <div id="menu-buttons">
+                <button id="create-lobby-button">CREATE LOBBY</button>
+                <button id="join-lobby-button">JOIN LOBBY</button>
+                <button id="refresh-lobbies-button">REFRESH</button>
+            </div>
+        </div>
+        
+        <!-- Lobby Screen -->
+        <div id="lobby-screen" class="hidden">
+            <div id="lobby-info">
+                <h2>LOBBY: <span id="lobby-id-display"></span></h2>
+                <div id="lobby-players">
+                    <h3>PLAYERS</h3>
+                    <div id="players-list"></div>
+                </div>
+                <button id="ready-button">READY</button>
+                <button id="leave-lobby-button">LEAVE LOBBY</button>
+            </div>
+        </div>
+        
+        <!-- Join Lobby Screen -->
+        <div id="join-screen" class="hidden">
+            <h2>AVAILABLE LOBBIES</h2>
+            <div id="lobbies-list"></div>
+            <button id="back-button">BACK</button>
+        </div>
+    </div>
+    
+    <script type="module" src="main.js"></script>
+</body>
+</html>
+
