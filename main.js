@@ -35,6 +35,8 @@ const keys = {
 };
 
 const mouse = { x: 0, y: 0 };
+let mouseLocked = false;
+let cameraRotation = { x: 0, y: 0 }; // Pitch and yaw for first-person camera
 
 // Constants
 const PLAYER_SPEED = 0.15;
@@ -44,18 +46,17 @@ const ARENA_SIZE = 18;
 function init() {
     // Scene setup
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0a0a);
-    scene.fog = new THREE.Fog(0x1a1a2e, 10, 50);
+    scene.background = new THREE.Color(0x2a2a3a); // Brighter background
+    scene.fog = new THREE.Fog(0x3a3a4a, 30, 80); // Lighter fog, further distance
 
-    // Camera
+    // Camera - will be attached to player for first-person view
     camera = new THREE.PerspectiveCamera(
         75,
         window.innerWidth / window.innerHeight,
         0.1,
         1000
     );
-    camera.position.set(0, 15, 20);
-    camera.lookAt(0, 0, 0);
+    // Camera position will be set when player spawns
 
     // Renderer
     const canvas = document.getElementById('game-canvas');
@@ -130,10 +131,10 @@ function init() {
 }
 
 function createArena() {
-    // Ground
+    // Ground - brighter desert sand
     const groundGeometry = new THREE.PlaneGeometry(40, 40);
     const groundMaterial = new THREE.MeshStandardMaterial({
-        color: 0x3d2817,
+        color: 0x6d5a47, // Brighter sand color
         roughness: 0.8,
         metalness: 0.1
     });
@@ -142,10 +143,10 @@ function createArena() {
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Ground pattern
+    // Ground pattern - brighter
     const patternGeometry = new THREE.PlaneGeometry(40, 40, 20, 20);
     const patternMaterial = new THREE.MeshStandardMaterial({
-        color: 0x2a1a0f,
+        color: 0x5a4a3a, // Brighter pattern
         roughness: 0.9,
         metalness: 0.05
     });
@@ -292,10 +293,12 @@ function createPlayer(playerId, playerName, position, isLocal) {
 }
 
 function setupLighting() {
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+    // Much brighter ambient light
+    const ambientLight = new THREE.AmbientLight(0x808080, 1.2);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffaa44, 0.8);
+    // Brighter directional light (sun)
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
     directionalLight.position.set(10, 20, 5);
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.width = 2048;
@@ -308,15 +311,16 @@ function setupLighting() {
     directionalLight.shadow.camera.bottom = -25;
     scene.add(directionalLight);
 
+    // Brighter neon lights
     const neonLights = [
-        { color: 0x00ff00, position: [-15, 5, -15] },
-        { color: 0xff00ff, position: [15, 5, -15] },
-        { color: 0x00ffff, position: [-15, 5, 15] },
-        { color: 0xffff00, position: [15, 5, 15] },
+        { color: 0x00ff00, position: [-15, 5, -15], intensity: 5 },
+        { color: 0xff00ff, position: [15, 5, -15], intensity: 5 },
+        { color: 0x00ffff, position: [-15, 5, 15], intensity: 5 },
+        { color: 0xffff00, position: [15, 5, 15], intensity: 5 },
     ];
 
     neonLights.forEach(light => {
-        const pointLight = new THREE.PointLight(light.color, 2, 20);
+        const pointLight = new THREE.PointLight(light.color, light.intensity, 30);
         pointLight.position.set(...light.position);
         pointLight.castShadow = true;
         scene.add(pointLight);
@@ -469,6 +473,10 @@ function setupSocketEvents() {
             createPlayer(playerId, playerData.name, playerData.position, isLocal);
             if (isLocal) {
                 localPlayer = players.get(playerId);
+                // Set up first-person camera
+                setupFirstPersonCamera();
+                // Request pointer lock for mouse look
+                requestPointerLock();
             } else {
                 remotePlayer = players.get(playerId);
             }
@@ -602,20 +610,41 @@ function setupEventListeners() {
         }
     });
 
-    // Mouse
-    window.addEventListener('mousemove', (e) => {
-        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    // Mouse movement for first-person camera
+    document.addEventListener('mousemove', (e) => {
+        if (mouseLocked && gameStarted) {
+            const sensitivity = 0.002;
+            cameraRotation.y -= e.movementX * sensitivity; // Yaw (left/right)
+            cameraRotation.x -= e.movementY * sensitivity; // Pitch (up/down)
+            
+            // Limit pitch to prevent flipping
+            cameraRotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraRotation.x));
+        }
     });
 
     window.addEventListener('mousedown', (e) => {
-        if (!gameStarted || gameOver || !localPlayer) return;
-        if (e.button === 0) { // Left click
+        if (!gameStarted || gameOver) return;
+        
+        // Request pointer lock when clicking in game
+        if (!mouseLocked && gameStarted) {
+            requestPointerLock();
+        }
+        
+        if (e.button === 0 && localPlayer) { // Left click
             shoot();
         }
     });
 
     window.addEventListener('contextmenu', (e) => e.preventDefault());
+    
+    // Pointer lock events
+    document.addEventListener('pointerlockchange', () => {
+        mouseLocked = document.pointerLockElement === renderer.domElement;
+    });
+    
+    document.addEventListener('pointerlockerror', () => {
+        console.log('Pointer lock failed');
+    });
 
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -625,24 +654,66 @@ function setupEventListeners() {
     });
 }
 
+function setupFirstPersonCamera() {
+    if (!localPlayer) return;
+    // Camera will be positioned at player's eye level
+    updateCameraPosition();
+}
+
+function requestPointerLock() {
+    const canvas = renderer.domElement;
+    canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock || canvas.webkitRequestPointerLock;
+    if (canvas.requestPointerLock) {
+        canvas.requestPointerLock();
+    }
+}
+
+function updateCameraPosition() {
+    if (!localPlayer) return;
+    
+    // Position camera at player's eye level (about 1.6 units up from player center)
+    const eyeHeight = 1.6;
+    camera.position.set(
+        localPlayer.position.x,
+        localPlayer.position.y + eyeHeight,
+        localPlayer.position.z
+    );
+    
+    // Apply camera rotation (yaw and pitch)
+    const euler = new THREE.Euler(cameraRotation.x, cameraRotation.y, 0, 'YXZ');
+    camera.quaternion.setFromEuler(euler);
+}
+
 function updateLocalPlayer() {
     if (!gameStarted || gameOver || !localPlayer) return;
 
-    const velocity = new THREE.Vector3();
-    if (keys.w) velocity.z -= PLAYER_SPEED;
-    if (keys.s) velocity.z += PLAYER_SPEED;
-    if (keys.a) velocity.x -= PLAYER_SPEED;
-    if (keys.d) velocity.x += PLAYER_SPEED;
-
-    localPlayer.position.add(velocity);
+    // Movement relative to camera direction (first-person style)
+    const moveDirection = new THREE.Vector3();
+    const cameraDirection = new THREE.Vector3();
+    camera.getWorldDirection(cameraDirection);
+    
+    // Create a flat forward vector (ignore pitch for ground movement)
+    const flatForward = new THREE.Vector3(cameraDirection.x, 0, cameraDirection.z).normalize();
+    const flatRight = new THREE.Vector3(-flatForward.z, 0, flatForward.x).normalize();
+    
+    // Calculate movement based on camera direction
+    if (keys.w) moveDirection.add(flatForward);
+    if (keys.s) moveDirection.sub(flatForward);
+    if (keys.a) moveDirection.sub(flatRight);
+    if (keys.d) moveDirection.add(flatRight);
+    
+    moveDirection.normalize();
+    moveDirection.multiplyScalar(PLAYER_SPEED);
+    
+    localPlayer.position.add(moveDirection);
     localPlayer.position.x = Math.max(-ARENA_SIZE, Math.min(ARENA_SIZE, localPlayer.position.x));
     localPlayer.position.z = Math.max(-ARENA_SIZE, Math.min(ARENA_SIZE, localPlayer.position.z));
+    
+    // Update player rotation to match camera yaw
+    localPlayer.rotation.y = cameraRotation.y;
 
-    // Rotate to face movement direction
-    if (velocity.length() > 0) {
-        const targetRotation = Math.atan2(velocity.x, velocity.z);
-        localPlayer.rotation.y = targetRotation;
-    }
+    // Update camera position
+    updateCameraPosition();
 
     // Send position to server
     socket.emit('player-move', {
@@ -660,17 +731,17 @@ function updateLocalPlayer() {
 }
 
 function shoot() {
-    if (!localPlayer || !remotePlayer) return;
+    if (!localPlayer) return;
 
-    const direction = new THREE.Vector3()
-        .subVectors(remotePlayer.position, localPlayer.position)
-        .normalize();
+    // Shoot in the direction the camera is facing
+    const direction = new THREE.Vector3();
+    camera.getWorldDirection(direction);
 
     socket.emit('player-shoot', {
         position: {
-            x: localPlayer.position.x,
-            y: localPlayer.position.y + 1,
-            z: localPlayer.position.z
+            x: camera.position.x,
+            y: camera.position.y,
+            z: camera.position.z
         },
         direction: {
             x: direction.x,
@@ -745,6 +816,10 @@ function animate() {
     
     if (gameStarted && !gameOver) {
         updateLocalPlayer();
+        // Ensure camera is always updated (even when not moving)
+        if (localPlayer) {
+            updateCameraPosition();
+        }
     }
     
     // Rotate neon elements
