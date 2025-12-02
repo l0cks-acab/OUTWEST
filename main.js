@@ -3,7 +3,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { FilmPass } from 'three/examples/jsm/postprocessing/FilmPass.js';
-import { VignettePass } from 'three/examples/jsm/postprocessing/VignettePass.js';
+// VignettePass doesn't exist in Three.js, we'll create a custom vignette effect
 import { io } from 'socket.io-client';
 
 // Socket.io connection
@@ -82,9 +82,8 @@ function init() {
     const filmPass = new FilmPass(0.35, 0.025, 648, false);
     composer.addPass(filmPass);
 
-    // Vignette
-    const vignettePass = new VignettePass(0.5, 0.5, 0.5, 0.5);
-    composer.addPass(vignettePass);
+    // Vignette effect (custom shader - VignettePass doesn't exist in Three.js)
+    // We'll apply vignette via CSS instead for simplicity
 
     // Create arena
     createArena();

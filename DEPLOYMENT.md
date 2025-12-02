@@ -41,9 +41,15 @@ In Netlify dashboard:
 2. Create a new project
 3. Connect your Git repository or deploy from GitHub
 4. Railway will auto-detect Node.js
-5. Set the start command: `node server.js`
+5. **Important**: In Railway settings:
+   - Go to your service → Settings → Deploy
+   - Set **Build Command** to: `npm install --omit=dev` (or leave empty)
+   - Set **Start Command** to: `node server.js`
+   - This prevents Railway from trying to build the frontend
 6. Railway will provide a URL like `https://your-app.railway.app`
 7. Use this URL as your `VITE_SERVER_URL` in Netlify
+
+**Note**: The `nixpacks.toml` file in the repo should automatically configure this, but you can also set it manually in Railway's UI.
 
 ### Option 2: Render
 
