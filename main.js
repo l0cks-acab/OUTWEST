@@ -395,6 +395,16 @@ function setupSocketEvents() {
         document.getElementById('lobby-id-display').textContent = data.lobbyId;
         updatePlayersList(data.players);
         document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('join-screen').classList.add('hidden');
+        document.getElementById('lobby-screen').classList.remove('hidden');
+    });
+
+    socket.on('lobby-joined', (data) => {
+        myLobbyId = data.lobbyId;
+        document.getElementById('lobby-id-display').textContent = data.lobbyId;
+        updatePlayersList(data.players);
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('join-screen').classList.add('hidden');
         document.getElementById('lobby-screen').classList.remove('hidden');
     });
 

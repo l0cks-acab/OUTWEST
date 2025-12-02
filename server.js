@@ -122,7 +122,13 @@ io.on('connection', (socket) => {
         
         socket.join(lobbyId);
         
-        // Notify all players in lobby
+        // Notify the joining player that they successfully joined
+        socket.emit('lobby-joined', {
+            lobbyId: lobbyId,
+            players: Array.from(lobby.players.values())
+        });
+        
+        // Notify all players in lobby (including the one who just joined)
         io.to(lobbyId).emit('player-joined', {
             players: Array.from(lobby.players.values()),
             newPlayer: { id: socket.id, name: playerName || 'Player' }
